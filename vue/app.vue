@@ -1,6 +1,5 @@
 <template>
   <div>
-
     <div style="display: flex; justify-content: center; align-items: center;">
       <div style="display: flex; justify-content: center; align-items: center;">
         <i class="bi bi-geo-alt-fill" style="margin-right: 20px; font-size:xx-large;"></i>
@@ -35,10 +34,12 @@
     </div>
     <PickerModal></PickerModal>
   </div>
+
 </template>
 
 <script>
 import PickerModal from './components/pickerModal.vue'
+
 export default {
   components: { PickerModal },
   data () {
@@ -50,10 +51,11 @@ export default {
       provider: '-',
       modalVisibly: false,
       country: '-'
-
     }
   },
-  mounted () { this.findCountry() },
+  mounted () {
+    this.findCountry()
+  },
   methods: {
     sleep (milliseconds) {
       const date = Date.now()
@@ -110,7 +112,7 @@ export default {
                   this.speed = 0
                   this.status = content.status
                   break
-                case 'Finished upload' :
+                case 'Finished upload':
                   this.speed = 0
                   this.status = content.status
                   break
