@@ -29,8 +29,8 @@
       <h1 v-text="status"></h1>
     </div>
     <div style="display: flex; justify-content: center; align-items: center;">
-      <a-button type="primary" style="margin-right: 10px;" @click="automaticTest()">Start</a-button>
-      <a-button type="primary" style="margin-right: 10px;" @click="modalVisibly = true">Select Server</a-button>
+      <a-button :disabled="buttonStatus" type="primary" style="margin-right: 10px;" @click="automaticTest()">Start</a-button>
+      <a-button :disabled="buttonStatus" type="primary" style="margin-right: 10px;" @click="modalVisibly = true">Select Server</a-button>
     </div>
     <PickerModal></PickerModal>
   </div>
@@ -50,7 +50,8 @@ export default {
       status: 'Ready',
       provider: '-',
       modalVisibly: false,
-      country: '-'
+      country: '-',
+      buttonStatus: false
     }
   },
   mounted () {
@@ -99,31 +100,38 @@ export default {
             if (res.content != null) {
               const content = JSON.parse(res.content)
               this.provider = content.provider
+              // Downloading - 1
+              // Uploading - 2
+              // Finished download - 3
+              // Finished upload - 4
+              // Finished - 5
+              // Searching for the best server - 6
+              // Failed - anything else
               switch (content.status) {
-                case 'Downloading':
+                case 1:
                   this.speed = content.downloadSpeed
-                  this.status = content.status
+                  this.status = 'Downloading'
                   break
-                case 'Uploading':
+                case 2:
                   this.speed = content.uploadSpeed
-                  this.status = content.status
+                  this.status = 'Uploading'
                   break
-                case 'Finished download':
+                case 3:
                   this.speed = 0
-                  this.status = content.status
+                  this.status = 'Finished download'
                   break
-                case 'Finished upload':
+                case 4:
                   this.speed = 0
-                  this.status = content.status
+                  this.status = 'Finished upload'
                   break
-                case 'Finished':
+                case 5:
                   this.lastDownload = content.downloadSpeed
                   this.lastUpload = content.uploadSpeed
-                  this.status = content.status
+                  this.status = 'Finished'
                   run = false
                   break
-                case 'Searching for the best server':
-                  this.status = content.status
+                case 6:
+                  this.status = 'Searching for the best server'
                   break
                 default:
                   this.lastDownload = 0
@@ -140,6 +148,7 @@ export default {
       }
     },
     async automaticTest () {
+      this.buttonStatus = true
       this.lastDownload = '-'
       this.lastUpload = '-'
       this.provider = '-'
@@ -149,8 +158,10 @@ export default {
       this.sleep(500)
       await this.readResult()
       this.speed = 0
+      this.buttonStatus = false
     },
     async specifiedTest (data) {
+      this.buttonStatus = true
       this.modalVisibly = false
       this.lastDownload = '-'
       this.lastUpload = '-'
@@ -161,6 +172,7 @@ export default {
       this.sleep(500)
       await this.readResult()
       this.speed = 0
+      this.buttonStatus = false
     }
   }
 }
