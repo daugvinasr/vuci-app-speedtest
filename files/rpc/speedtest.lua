@@ -14,6 +14,8 @@ MyIpURL = "https://api.myip.com/"
 LastUploadSpeed = 0
 LastDownloadSpeed = 0
 
+
+
 function Wait(seconds)
     local start = os.time()
     repeat
@@ -21,6 +23,13 @@ function Wait(seconds)
 end
 
 function WriteFile(status, downSpeed, uploadSpeed, provider, host)
+    -- // Downloading - 1
+    -- // Uploading - 2
+    -- // Finished download - 3
+    -- // Finished upload - 4
+    -- // Finished - 5
+    -- // Searching for the best server - 6
+    -- // Failed - anything else
     local file = io.open(TestResult, "w+")
     if file ~= nil then
         file:write(json.encode({
@@ -45,7 +54,7 @@ function TestDownload(server)
             :setopt_timeout(20)
             :setopt_progressfunction(function(dltotal, dlnow, uptotal, upnow)
                 LastDownloadSpeed = math.floor(((dlnow / 1000000) * 8 / (socket.gettime() - startTime)) * 100) / 100
-                WriteFile('Downloading', LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
+                WriteFile(1, LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
             end)
             :perform()
             :close()
@@ -55,9 +64,10 @@ function TestDownload(server)
         or error == "[CURL-EASY][PARTIAL_FILE] Transferred a partial file (18)"
         or error == "[CURL-EASY][PARTIAL_FILE] Error (18)"
         or error == nil then
-        WriteFile('Finished download', LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
+        WriteFile(3, LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
     elseif error ~= nil then
-        WriteFile('Failed', 0, 0, server.provider, server.host)
+        WriteFile(0, 0, 0, server.provider, server.host)
+        os.exit()
     end
 end
 
@@ -73,7 +83,7 @@ function TestUpload(server)
             :setopt_httppost(curl.form():add_file("test_file", "/dev/zero"))
             :setopt_progressfunction(function(dltotal, dlnow, uptotal, upnow)
                 LastUploadSpeed = math.floor(((upnow / 1000000) * 8 / (socket.gettime() - startTime)) * 100) / 100
-                WriteFile('Uploading', LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
+                WriteFile(2, LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
             end)
             :perform()
             :close()
@@ -81,9 +91,11 @@ function TestUpload(server)
     if error == "[CURL-EASY][OPERATION_TIMEDOUT] Timeout was reached (28)"
         or error == "[CURL-EASY][OPERATION_TIMEDOUT] Error (28)"
         or error == nil then
-        WriteFile('Finished upload', LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
+        WriteFile(4, LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
     elseif error ~= nil then
-        WriteFile('Failed', 0, 0, server.provider, server.host)
+        WriteFile(0, 0, 0, server.provider, server.host)
+        os.exit()
+
     end
 end
 
@@ -100,19 +112,9 @@ function GetServerList()
                 :close()
         end)
         if error ~= nil then
-            WriteFile("Unable to fetch server list, exiting", 0, 0, "-", "-")
+            WriteFile(0, 0, 0, "-", "-")
             os.exit()
-        else if error == nil then
-                local file = io.open(ServerList, "r")
-                if file ~= nil and string.sub(file:read("*all"), 1, 2) == "[{" then
-                    WriteFile("Server list fetched", 0, 0, "-", "-")
-                else
-                    WriteFile("Unable to fetch server list, exiting", 0, 0, "-", "-")
-                    os.exit()
-                end
-            end
         end
-        if file ~= nil then file:close() end
     end
 end
 
@@ -127,7 +129,7 @@ function FindCountry()
             :close()
     end)
     if error ~= nil then
-        WriteFile("Failed to find geolocated country, exiting", 0, 0, "-", "-")
+        WriteFile(0, 0, 0, "-", "-")
         os.exit()
     else
         return country
@@ -149,11 +151,11 @@ function FindServersByCountry()
             end
             if servers[1] ~= nil then return servers
             else
-                WriteFile("Failed to find providers for the geolocated country, exiting", 0, 0, "-", "-")
+                WriteFile(0, 0, 0, "-", "-")
                 os.exit()
             end
         else
-            WriteFile("Failed to find providers for the geolocated country, exiting", 0, 0, "-", "-")
+            WriteFile(0, 0, 0, "-", "-")
             os.exit()
         end
     else
@@ -162,7 +164,7 @@ function FindServersByCountry()
 end
 
 function FindBestServer()
-    WriteFile("Searching for the best server", 0, 0, "-", "-")
+    WriteFile(6, 0, 0, "-", "-")
     local servers = FindServersByCountry()
     local bestServer = nil
     local bestTime = 999999
@@ -184,11 +186,11 @@ function FindBestServer()
         end
         if bestServer ~= nil then return bestServer
         else
-            WriteFile("Failed to find best server, exiting", 0, 0, "-", "-")
+            WriteFile(0, 0, 0, "-", "-")
             os.exit()
         end
     else
-        WriteFile("Failed to find best server, exiting", 0, 0, "-", "-")
+        WriteFile(0, 0, 0, "-", "-")
         os.exit()
     end
 end
@@ -210,7 +212,7 @@ if (args.automatic) then
     TestDownload(server)
     Wait(2)
     TestUpload(server)
-    WriteFile('Finished', LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
+    WriteFile(5, LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
 elseif (args.findBest) then
     GetServerList()
     print(json.encode(FindBestServer()))
@@ -221,7 +223,7 @@ elseif (args.both and args.provider) then
     TestDownload(server)
     Wait(2)
     TestUpload(server)
-    WriteFile('Finished', LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
+    WriteFile(5, LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
 elseif (args.download) then
     local server = {}
     server.host = args.download
@@ -239,7 +241,7 @@ elseif (args.both) then
     TestDownload(server)
     Wait(2)
     TestUpload(server)
-    WriteFile('Finished', LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
+    WriteFile(5, LastDownloadSpeed, LastUploadSpeed, server.provider, server.host)
 elseif (args.getServers) then
     GetServerList()
 elseif (args.findCountry) then
